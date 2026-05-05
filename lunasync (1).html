@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>lunasync</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#1A1410;--parchment:#F8F4EE;--paper:#FFFCF8;
+  --phase-m:#C4645A;--phase-f:#6A9E72;--phase-o:#B8943A;--phase-l:#7A6BA8;
+  --phase-m-bg:#F9EDEB;--phase-f-bg:#EBF3EC;--phase-o-bg:#F7F1E0;--phase-l-bg:#EEE9F5;
+  --border:#E2D9CE;--mid:#7A6A60;--soft:#A89A90;
+}
+html,body{height:100%;font-family:'Jost',sans-serif;background:var(--parchment);color:var(--ink)}
+body{max-width:480px;margin:0 auto;min-height:100vh;position:relative}
+
+header{padding:24px 22px 0;display:flex;justify-content:space-between;align-items:baseline}
+.wordmark{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;font-style:italic;color:var(--ink)}
+.cycle-badge{font-size:11px;color:var(--mid)}
+.cycle-badge span{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:500;font-style:italic;color:var(--ink)}
+
+.phase-strip{margin:14px 22px 0;border-radius:13px;padding:13px 17px;transition:background 0.4s}
+.phase-strip.m{background:var(--phase-m-bg)}.phase-strip.f{background:var(--phase-f-bg)}
+.phase-strip.o{background:var(--phase-o-bg)}.phase-strip.l{background:var(--phase-l-bg)}
+.phase-strip.none{background:#F4F1EE}
+.ps-label{font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;opacity:0.5;margin-bottom:2px}
+.ps-name{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:400;font-style:italic}
+.ps-name.m{color:var(--phase-m)}.ps-name.f{color:var(--phase-f)}.ps-name.o{color:var(--phase-o)}.ps-name.l{color:var(--phase-l)}.ps-name.none{color:var(--soft)}
+.ps-desc{font-size:11px;color:var(--mid);margin-top:2px}
+
+.tabs{display:flex;margin:16px 22px 0;border-bottom:1px solid var(--border)}
+.tab{flex:1;padding:10px 4px;font-size:10px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:var(--soft);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all 0.2s;text-align:center}
+.tab.active{color:var(--ink);border-bottom-color:var(--ink)}
+
+.view{display:none;padding:20px 22px 40px;animation:fadeUp 0.22s ease both}
+.view.show{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.field-label{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--soft);margin-bottom:9px}
+.field-block{margin-bottom:22px}
+.day-counter{display:flex;align-items:center;gap:16px;margin-bottom:4px}
+.day-big{font-family:'Cormorant Garamond',serif;font-size:64px;font-weight:300;line-height:1;color:var(--ink)}
+.day-controls{display:flex;flex-direction:column;gap:6px}
+.d-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--paper);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--mid);transition:all 0.15s;user-select:none}
+.d-btn:hover{background:var(--ink);color:var(--paper)}
+.day-sub{font-size:11px;color:var(--soft)}
+
+.start-date-row{display:flex;align-items:center;gap:10px}
+.date-in{flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:11px;font-family:'Jost',sans-serif;font-size:13px;background:var(--paper);color:var(--ink);transition:border 0.15s}
+.date-in:focus{outline:none;border-color:var(--ink)}
+.date-clear-btn{padding:8px 14px;border:1px solid var(--border);border-radius:9px;background:transparent;color:var(--soft);font-family:'Jost',sans-serif;font-size:10px;font-weight:500;letter-spacing:0.05em;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.date-clear-btn:hover{border-color:var(--mid);color:var(--ink)}
+.start-date-hint{font-size:10px;color:var(--soft);margin-top:6px;line-height:1.6}
+.auto-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:#2A5228;background:var(--phase-f-bg);padding:3px 8px;border-radius:20px;margin-left:8px;vertical-align:middle}
+.auto-badge::before{content:'●';font-size:6px}
+
+.phase-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.phase-opt{padding:12px 14px;border-radius:11px;border:1.5px solid var(--border);background:var(--paper);cursor:pointer;transition:all 0.2s}
+.phase-opt:hover{border-color:var(--mid)}
+.phase-opt-name{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:400;font-style:italic}
+.phase-opt-days{font-size:9px;color:var(--soft);margin-top:2px}
+.phase-opt.sel-m{background:var(--phase-m-bg);border-color:var(--phase-m)}.phase-opt.sel-m .phase-opt-name{color:var(--phase-m)}
+.phase-opt.sel-f{background:var(--phase-f-bg);border-color:var(--phase-f)}.phase-opt.sel-f .phase-opt-name{color:var(--phase-f)}
+.phase-opt.sel-o{background:var(--phase-o-bg);border-color:var(--phase-o)}.phase-opt.sel-o .phase-opt-name{color:var(--phase-o)}
+.phase-opt.sel-l{background:var(--phase-l-bg);border-color:var(--phase-l)}.phase-opt.sel-l .phase-opt-name{color:var(--phase-l)}
+
+.bbt-row{display:flex;align-items:center;gap:10px}
+.bbt-in{width:110px;padding:10px 14px;border:1.5px solid var(--border);border-radius:11px;font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;background:var(--paper);color:var(--ink);text-align:center;transition:border 0.15s}
+.bbt-in:focus{outline:none;border-color:var(--ink)}
+.bbt-unit{font-size:13px;color:var(--mid)}
+.bbt-hint{font-size:10px;color:var(--soft);margin-top:5px;line-height:1.6}
+
+.save-btn{width:100%;padding:13px;border:none;border-radius:12px;background:var(--ink);color:var(--paper);font-family:'Jost',sans-serif;font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:background 0.2s}
+.save-btn:hover{background:#3A2E28}
+.toast{margin-top:10px;padding:10px 14px;border-radius:10px;background:var(--phase-f-bg);color:#285A2C;font-size:12px;text-align:center;display:none}
+
+.gen-btn{width:100%;padding:13px;border:1.5px solid var(--ink);border-radius:12px;background:transparent;color:var(--ink);font-family:'Jost',sans-serif;font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;margin-bottom:16px}
+.gen-btn:hover{background:var(--ink);color:var(--paper)}
+
+.bbt-pill{border-radius:11px;padding:10px 14px;margin-bottom:14px;font-size:12px;line-height:1.6;display:flex;gap:10px;align-items:flex-start}
+.bbt-pill.low{background:var(--phase-f-bg);color:#2A5228}
+.bbt-pill.rising{background:var(--phase-o-bg);color:#5A3D08}
+.bbt-pill.high{background:var(--phase-l-bg);color:#3D3070}
+.bbt-pill.none{background:#F2EDE8;color:var(--mid)}
+.bp-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+
+.isec{margin-bottom:4px}
+.isec-head{font-size:9px;font-weight:500;letter-spacing:0.13em;text-transform:uppercase;color:var(--soft);padding:12px 0 7px;border-top:1px solid var(--border);display:flex;align-items:center;gap:7px}
+.isec-icon{font-size:14px}
+.icard{border:1px solid var(--border);border-left-width:3px;border-radius:12px;padding:14px 16px;margin-bottom:9px;background:var(--paper);animation:fadeUp 0.2s ease both}
+.icard-label{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--soft);margin-bottom:5px}
+.icard-body{font-size:13px;line-height:1.75;color:var(--mid)}
+.icard-body strong{color:var(--ink);font-weight:500}
+.info-msg{background:#F4F1EE;border-radius:12px;padding:16px;font-size:13px;color:var(--mid);text-align:center;line-height:1.7}
+
+.cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.cal-month{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:400;font-style:italic}
+.nav-arrows{display:flex;gap:6px}
+.arr{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--paper);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--mid);font-size:13px;transition:all 0.15s}
+.arr:hover{background:var(--ink);color:var(--paper)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:14px}
+.cal-hdr-cell{text-align:center;font-size:8px;font-weight:500;letter-spacing:0.07em;color:var(--soft);text-transform:uppercase;padding:3px 0 5px}
+.cal-cell{aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;position:relative}
+.cel-num{font-size:11px;font-weight:400;line-height:1;color:var(--ink)}
+.cel-cd{font-size:7px;font-weight:500;line-height:1}
+.cal-cell.other-month .cel-num{color:var(--soft);opacity:0.3}
+.cal-cell.is-today{outline:2px solid var(--ink);outline-offset:-2px;border-radius:8px}
+.cal-cell.cycle-start .cel-num::after{content:'◇';font-size:6px;color:var(--ink);position:absolute;top:2px;right:2px;opacity:0.5}
+.legend-section{margin-bottom:10px}
+.legend-title{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--soft);margin-bottom:6px}
+.legend-row{display:flex;flex-wrap:wrap;gap:10px}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--mid)}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="wordmark">lunasync</div>
+    <div class="cycle-badge">Day <span id="hdr-day">1</span></div>
+  </header>
+
+  <div class="phase-strip none" id="phase-strip">
+    <div class="ps-label">Current phase</div>
+    <div class="ps-name none" id="ps-name">—</div>
+    <div class="ps-desc" id="ps-desc">Select your phase in the Log tab</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('log')">Log</button>
+    <button class="tab" onclick="showTab('insights')">Insights</button>
+    <button class="tab" onclick="showTab('calendar')">Calendar</button>
+  </div>
+
+  <!-- LOG -->
+  <div class="view show" id="view-log">
+    <div class="field-block">
+      <div class="field-label">Cycle start date <span class="auto-badge" id="auto-badge" style="display:none">Auto</span></div>
+      <div class="start-date-row">
+        <input class="date-in" id="start-date-input" type="date" onchange="onStartDateChange()">
+        <button class="date-clear-btn" onclick="clearStartDate()">Clear</button>
+      </div>
+      <div class="start-date-hint" id="start-date-hint">Set the first day of your current cycle — day count will update automatically.</div>
+    </div>
+
+    <div class="field-block">
+      <div class="field-label">Day of cycle</div>
+      <div class="day-counter">
+        <div class="day-big" id="day-display">1</div>
+        <div class="day-controls">
+          <button class="d-btn" onclick="changeDay(1)">+</button>
+          <button class="d-btn" onclick="changeDay(-1)">−</button>
+        </div>
+      </div>
+      <div class="day-sub" id="day-sub">Adjust to today's cycle day</div>
+    </div>
+
+    <div class="field-block">
+      <div class="field-label">Menstrual phase</div>
+      <div class="phase-grid">
+        <div class="phase-opt" onclick="selectPhase('m',this)"><div class="phase-opt-name">Menstrual</div><div class="phase-opt-days">Days 1–5 · Low estrogen &amp; progesterone</div></div>
+        <div class="phase-opt" onclick="selectPhase('f',this)"><div class="phase-opt-name">Follicular</div><div class="phase-opt-days">Days 6–13 · Estrogen rising</div></div>
+        <div class="phase-opt" onclick="selectPhase('o',this)"><div class="phase-opt-name">Ovulatory</div><div class="phase-opt-days">Days 14–17 · LH surge + estrogen peak</div></div>
+        <div class="phase-opt" onclick="selectPhase('l',this)"><div class="phase-opt-name">Luteal</div><div class="phase-opt-days">Days 18–28 · Progesterone rising</div></div>
+      </div>
+    </div>
+
+    <div class="field-block">
+      <div class="field-label">Basal body temperature</div>
+      <div class="bbt-row">
+        <input class="bbt-in" id="bbt-input" type="number" step="0.01" min="96" max="101" placeholder="97.6">
+        <span class="bbt-unit">°F</span>
+      </div>
+      <div class="bbt-hint">Take first thing on waking — before sitting up, speaking, or drinking anything</div>
+    </div>
+
+    <button class="save-btn" onclick="saveDay()">Save today</button>
+    <div class="toast" id="toast">✓ Saved — check Insights and Calendar</div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="view" id="view-insights">
+    <button class="gen-btn" onclick="generateInsights()">Show today's insights</button>
+    <div id="bbt-pill-area"></div>
+    <div id="insight-area"></div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="view" id="view-calendar">
+    <div class="cal-nav">
+      <div class="cal-month" id="cal-month"></div>
+      <div class="nav-arrows">
+        <button class="arr" onclick="changeMonth(-1)">‹</button>
+        <button class="arr" onclick="changeMonth(1)">›</button>
+      </div>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="legend-section">
+      <div class="legend-title">Logged</div>
+      <div class="legend-row">
+        <div class="leg-item"><div class="leg-dot" style="background:var(--phase-m)"></div>Menstrual</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--phase-f)"></div>Follicular</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--phase-o)"></div>Ovulatory</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--phase-l)"></div>Luteal</div>
+      </div>
+    </div>
+    <div class="legend-section">
+      <div class="legend-title">Predicted</div>
+      <div class="legend-row">
+        <div class="leg-item"><div class="leg-dot" style="background:var(--phase-m-bg);border:1.5px dashed var(--phase-m)"></div>Menstrual</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--phase-f-bg);border:1.5px dashed var(--phase-f)"></div>Follicular</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--phase-o-bg);border:1.5px dashed var(--phase-o)"></div>Ovulatory</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--phase-l-bg);border:1.5px dashed var(--phase-l)"></div>Luteal</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const PHASES = {
+  m:{ name:'Menstrual',  desc:'Rest, restore, release',  hex:'#C4645A', bgHex:'#F9EDEB' },
+  f:{ name:'Follicular', desc:'Rise, create, begin',     hex:'#6A9E72', bgHex:'#EBF3EC' },
+  o:{ name:'Ovulatory',  desc:'Shine, connect, express', hex:'#B8943A', bgHex:'#F7F1E0' },
+  l:{ name:'Luteal',     desc:'Reflect, slow, prepare',  hex:'#7A6BA8', bgHex:'#EEE9F5' },
+};
+
+const INSIGHTS = {
+  m:{
+    body_0:`Estrogen and progesterone are at their lowest right now — that's the biological reason energy and mood dip during menstruation. Prostaglandins are high, causing cramping and inflammation. This is a real hormonal trough, not a mindset problem.`,
+    body_1:`FSH begins rising toward the end of your period, quietly recruiting the next follicle. Your body is already preparing for the next cycle even while you bleed.`,
+    diet_0:`<strong>Seed cycling:</strong> flaxseed and pumpkin seeds are your allies right now. Both are rich in lignans and zinc, which support the follicular phase coming next. Add them to smoothies, porridge, or yoghurt.`,
+    diet_1:`Prioritise <strong>iron-rich foods</strong> — ground beef, liver, lentils, dark leafy greens. You're losing iron through bleeding and need to replenish it actively. Pair with vitamin C to boost absorption.`,
+    diet_2:`Aim for <strong>0.7–0.9g protein per lb of bodyweight</strong>. Iron loss from bleeding increases your nutritional needs. This isn't the phase to under-eat.`,
+    diet_3:`<strong>Magnesium</strong> is clinically shown to reduce cramping — found in dark chocolate, pumpkin seeds, and leafy greens. Omega-3s reduce inflammation. Heat therapy is evidence-backed for pain. Limit alcohol and caffeine, which worsen cramping and disrupt sleep.`,
+    move_0:`Best movement right now: <strong>yoga, yin, gentle stretching, walking</strong>. These support blood flow and ease cramping without depleting already-low energy reserves.`,
+    move_1:`High-intensity training can feel genuinely depleting during menstruation — not because you're weak, but because your hormones aren't supporting recovery right now. Rest is productive. Movement is medicine, not punishment.`,
+    social_0:`Your social battery is genuinely lower right now — this is biology, not a personality flaw. Prioritise 1:1 conversations over groups. Cancel freely without guilt. Solitude is restorative in this phase.`,
+    social_1:`<strong>Skills that align with this phase:</strong> journalling, solo creative reflection, tarot, dreaming and visioning. Your inner world is rich right now — use it.`,
+    tips_0:`<strong>Prioritise:</strong> rest, iron-rich meals, heat therapy for cramps, 8–9 hours of sleep, gentle movement, magnesium supplementation, and protecting your energy.`,
+    tips_1:`<strong>Avoid or reduce:</strong> high-intensity workouts, excess caffeine and alcohol, over-scheduling social commitments, and pushing through exhaustion as though it's a discipline problem.`,
+  },
+  f:{
+    body_0:`Estrogen is rising sharply as follicles develop — and serotonin tracks closely with estrogen. The lift in mood, motivation, and mental clarity you feel in this phase is real and measurable. Cognitive speed and verbal fluency are genuinely elevated right now.`,
+    body_1:`FSH is recruiting a dominant follicle while testosterone begins its gentle rise toward mid-cycle. Energy, skin clarity, and drive all reflect this upward hormonal momentum.`,
+    diet_0:`<strong>Seed cycling:</strong> flaxseed and pumpkin seeds through the follicular phase. Flax supports healthy estrogen metabolism; pumpkin seeds provide zinc to support the LH surge coming at ovulation.`,
+    diet_1:`Lean into <strong>chicken, tempeh, eggs, legumes, and Greek yoghurt</strong>. These lighter, high-quality proteins support muscle repair efficiently — your body is primed to build lean mass right now.`,
+    diet_2:`Target <strong>0.8–1.0g protein per lb of bodyweight</strong>. Your metabolism is efficient in this phase, making it an ideal window to build muscle and recover well from training.`,
+    diet_3:`<strong>B vitamins</strong> (found in eggs, leafy greens, legumes) support healthy estrogen metabolism. Skin is typically clearest in this phase. Use complex cognitive tasks, writing, and planning while your brain is firing on all cylinders.`,
+    move_0:`This is your power phase: <strong>strength training, HIIT, running, Tae Bo</strong>. Estrogen improves muscle repair and pain tolerance — you can push harder and recover faster than at any other point in your cycle.`,
+    move_1:`Ideal phase to increase weights, try new workout formats, or chase personal records. Your body is primed for adaptation. Don't hold back.`,
+    social_0:`Social drive returns fully in the follicular phase. <strong>Great for:</strong> networking, new friendships, first dates, group activities, and collaborative work. Your charisma and verbal fluency are biologically elevated.`,
+    social_1:`<strong>Skills that align with this phase:</strong> starting new projects, brainstorming, pitching ideas, beginning creative work, learning new skills. Your brain is wired for novelty and initiation right now.`,
+    tips_0:`<strong>Prioritise:</strong> taking on new projects, scheduling important meetings, increasing workout intensity, creative output, social connection, and complex cognitive work.`,
+    tips_1:`<strong>Watch for:</strong> over-committing because you feel so capable — the follicular high is real but temporary. Use it strategically rather than saying yes to everything.`,
+  },
+  o:{
+    body_0:`LH is surging to trigger egg release, while estrogen peaks just before ovulation then dips sharply. <strong>Testosterone peaks now</strong> — confidence, libido, assertiveness, and energy are all at their highest point in your cycle. This is your shortest phase: typically just 3–4 days.`,
+    body_1:`Cervical fluid becomes clear and stretchy (like raw egg white) — a reliable fertility sign alongside the BBT shift that follows ovulation. You are at your most magnetic and communicative right now.`,
+    diet_0:`<strong>Seed cycling:</strong> continue flaxseed and pumpkin seeds through ovulation. These support the hormonal environment needed for healthy egg release.`,
+    diet_1:`Prioritise <strong>anti-inflammatory proteins</strong>: salmon, oily fish, lean meats, edamame. These support the ovulatory process and help manage the brief estrogen dip that follows the LH surge.`,
+    diet_2:`Target <strong>0.8–1.0g protein per lb of bodyweight</strong>. Anti-inflammatory eating is especially valuable right now — your body is doing significant hormonal work.`,
+    diet_3:`<strong>Zinc and antioxidants</strong> (berries, colourful vegetables, dark leafy greens) support egg quality. Libido is highest in this phase — this is entirely normal and hormone-driven.`,
+    move_0:`Best movement: <strong>dance, barre, pilates, social sports</strong>. Testosterone peak means strength, coordination, and stamina are at their highest — you may hit personal records.`,
+    move_1:`<strong>Note on joint laxity:</strong> estrogen at its peak increases ligament flexibility, which can also mean less stability. Warm up thoroughly before training to protect your joints.`,
+    social_0:`<strong>Peak social energy.</strong> Say yes to group events, dates, collaborations, presentations, and difficult conversations. You are most articulate and persuasive right now — schedule important talks for this window.`,
+    social_1:`<strong>Skills that align with this phase:</strong> hosting, negotiating, public speaking, networking, performing, and any situation where you need to show up fully and confidently.`,
+    tips_0:`<strong>Prioritise:</strong> important conversations, presentations, social events, high-intensity workouts, creative collaboration, and capitalising on peak confidence and communication skills.`,
+    tips_1:`<strong>Remember:</strong> this phase only lasts 3–4 days. Use it intentionally. Don't waste your ovulatory window on low-stakes tasks you could do any time.`,
+  },
+  l:{
+    body_0:`Progesterone rises significantly after ovulation. Estrogen has a smaller secondary rise, then both hormones drop if pregnancy doesn't occur. <strong>Serotonin and dopamine dip in late luteal</strong> — this is the biological driver of PMS mood changes, not a character flaw.`,
+    body_1:`<strong>Neuroplasticity is genuinely elevated</strong> in the luteal phase — your brain is more receptive to learning and forming new neural pathways. Ideal window for studying, absorbing complex information, or picking up a new skill.`,
+    diet_0:`<strong>Seed cycling shifts:</strong> switch to sesame seeds and sunflower seeds in the luteal phase. These support progesterone production and provide lignans that help process estrogen as it declines.`,
+    diet_1:`Focus on <strong>turkey, salmon, sweet potato, pumpkin, and ground beef</strong>. Complex carbohydrates (sweet potato, oats, brown rice) support serotonin production and are especially important in late luteal.`,
+    diet_2:`Increase to <strong>0.9–1.1g protein per lb of bodyweight</strong>. Progesterone raises your metabolic rate — you genuinely need more calories and protein in this phase, especially in the week before your period. Honour the hunger.`,
+    diet_3:`<strong>Magnesium</strong> reduces PMS symptoms significantly (clinically backed). Reduce caffeine and alcohol in late luteal — both worsen mood instability and sleep disruption. Complex carbs are your friend for serotonin support.`,
+    move_0:`Best movement: <strong>moderate strength training, walking, swimming</strong>. Early luteal often feels strong; late luteal can feel heavier. Trust your body's daily signals rather than pushing a fixed plan.`,
+    move_1:`Reduce intensity as PMS symptoms appear — this isn't quitting, it's intelligent periodisation. Your body is doing significant hormonal work in the background. Recovery is part of performance.`,
+    social_0:`Social energy becomes more selective in the luteal phase. <strong>Prefer intimate settings</strong> over large groups. You may feel more sensitive to social dynamics — this is normal and temporary. Protect your energy without guilt.`,
+    social_1:`<strong>Skills that align with this phase:</strong> studying, taking a course, deep research, learning something new. Your elevated neuroplasticity makes this the best phase for deliberate learning.`,
+    tips_0:`<strong>Prioritise:</strong> nourishing meals with complex carbs and protein, magnesium-rich foods, quality sleep, reducing alcohol and caffeine, gentle-to-moderate exercise, and deep learning or study.`,
+    tips_1:`<strong>Watch for:</strong> interpreting PMS symptoms as permanent emotional states — they're hormone-driven and will shift. Avoid major decisions in late luteal if possible. Rest is productive.`,
+  },
+};
+
+const SECTIONS = [
+  { key:'body',   icon:'🌀', title:'Body & hormones',    labels:["What's happening hormonally","BBT & cycle position"] },
+  { key:'diet',   icon:'🥗', title:'Diet & nourishment', labels:['Seed cycling','Key proteins & foods','Protein target','Supplements & extras'] },
+  { key:'move',   icon:'🏃', title:'Exercise',           labels:['Best workouts','Intensity & recovery'] },
+  { key:'social', icon:'💬', title:'Social & skills',    labels:['Social energy','Skills to lean into'] },
+  { key:'tips',   icon:'✦',  title:"Today's priorities", labels:['What to prioritise','What to avoid'] },
+];
+
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+let calMonth = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+const state = { cycleDay:1, phase:null, bbt:null, cycleStartDate:null };
+let logs = {};
+
+function toKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function parseDateStr(s){ if(!s)return null; const[y,m,d]=s.split('-').map(Number); const dt=new Date(y,m-1,d); dt.setHours(0,0,0,0); return dt; }
+function dateToStr(dt){ if(!dt)return''; return`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; }
+
+window.addEventListener('DOMContentLoaded', () => {
+  try{ logs=JSON.parse(localStorage.getItem('ls_logs')||'{}'); }catch{ logs={}; }
+  const s=localStorage.getItem('ls_cycle_start');
+  if(s){ const dt=parseDateStr(s); if(dt&&dt<=TODAY){ state.cycleStartDate=dt; state.cycleDay=dayFromStart(dt); document.getElementById('start-date-input').value=s; } }
+  const tl=logs[toKey(TODAY)];
+  if(tl){
+    if(!state.cycleStartDate&&tl.cycleDay) state.cycleDay=tl.cycleDay;
+    state.phase=tl.phase||null; state.bbt=tl.bbt||null;
+    if(state.phase){ const idx=['m','f','o','l'].indexOf(state.phase); const opts=document.querySelectorAll('.phase-opt'); if(opts[idx])opts[idx].classList.add('sel-'+state.phase); }
+    if(state.bbt) document.getElementById('bbt-input').value=state.bbt;
+  }
+  document.getElementById('start-date-input').max=dateToStr(TODAY);
+  updateStartDateUI(); updateStrip(); buildCalendar();
+});
+
+function dayFromStart(dt){ return Math.max(1, Math.round((TODAY-dt)/86400000)+1); }
+
+function onStartDateChange(){
+  const inp=document.getElementById('start-date-input');
+  const dt=parseDateStr(inp.value);
+  if(!dt){ clearStartDate(); return; }
+  if(dt>TODAY){ alert("Cycle start date can't be in the future."); inp.value=dateToStr(state.cycleStartDate); return; }
+  state.cycleStartDate=dt; state.cycleDay=dayFromStart(dt);
+  updateStartDateUI(); updateStrip();
+}
+
+function clearStartDate(){
+  state.cycleStartDate=null; document.getElementById('start-date-input').value='';
+  updateStartDateUI(); updateStrip();
+}
+
+function updateStartDateUI(){
+  const badge=document.getElementById('auto-badge'), hint=document.getElementById('start-date-hint'), sub=document.getElementById('day-sub');
+  if(state.cycleStartDate){
+    badge.style.display='inline-flex';
+    hint.textContent=`Cycle started ${state.cycleStartDate.toLocaleDateString('en-US',{month:'long',day:'numeric'})} · Day count calculated automatically.`;
+    sub.textContent='Calculated from your cycle start date (tap ± to override)';
+  } else {
+    badge.style.display='none';
+    hint.textContent='Set the first day of your current cycle — day count will update automatically.';
+    sub.textContent="Adjust to today's cycle day";
+  }
+}
+
+function updateStrip(){
+  document.getElementById('hdr-day').textContent=state.cycleDay;
+  document.getElementById('day-display').textContent=state.cycleDay;
+  const k=state.phase, strip=document.getElementById('phase-strip');
+  strip.className='phase-strip '+(k||'none');
+  const n=document.getElementById('ps-name'); n.className='ps-name '+(k||'none');
+  n.textContent=k?PHASES[k].name:'—';
+  document.getElementById('ps-desc').textContent=k?PHASES[k].desc:'Select your phase in the Log tab';
+}
+
+function changeDay(d){
+  state.cycleDay=Math.max(1,Math.min(60,state.cycleDay+d));
+  if(state.cycleStartDate) document.getElementById('day-sub').textContent='Manually overridden (clear start date to reset)';
+  updateStrip();
+}
+
+function selectPhase(key,el){
+  document.querySelectorAll('.phase-opt').forEach(o=>o.className='phase-opt');
+  el.classList.add('sel-'+key); state.phase=key; updateStrip();
+}
+
+function saveDay(){
+  const bbt=document.getElementById('bbt-input').value;
+  state.bbt=bbt?parseFloat(bbt):null;
+  logs[toKey(TODAY)]={cycleDay:state.cycleDay,phase:state.phase,bbt:state.bbt};
+  try{
+    localStorage.setItem('ls_logs',JSON.stringify(logs));
+    if(state.cycleStartDate) localStorage.setItem('ls_cycle_start',dateToStr(state.cycleStartDate));
+    else localStorage.removeItem('ls_cycle_start');
+  }catch(e){}
+  const t=document.getElementById('toast'); t.style.display='block';
+  setTimeout(()=>t.style.display='none',2500);
+  buildCalendar();
+}
+
+function showTab(t){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('show'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+t).classList.add('show');
+  document.querySelectorAll('.tab')[['log','insights','calendar'].indexOf(t)].classList.add('active');
+  if(t==='calendar') buildCalendar();
+}
+
+function getBBTPill(){
+  if(!state.bbt) return{type:'none',icon:'🌡',text:'No BBT logged today. Add it in the Log tab for a temperature reading.'};
+  const b=state.bbt;
+  if(b>=98.2) return{type:'high',icon:'🌡',text:`Your BBT of ${b}°F is above the coverline — a sustained thermal shift confirms ovulation has likely occurred. Progesterone is now dominant.`};
+  if(b>=97.8) return{type:'rising',icon:'📈',text:`Your BBT of ${b}°F is in the rising range — a possible thermal shift is underway, suggesting ovulation may be imminent or just occurred.`};
+  return{type:'low',icon:'❄️',text:`Your BBT of ${b}°F is pre-shift, consistent with your follicular or early menstrual phase. Estrogen is likely dominant right now.`};
+}
+
+function generateInsights(){
+  if(!state.phase){
+    document.getElementById('insight-area').innerHTML='<div class="info-msg">Please log your phase in the <strong>Log tab</strong> first.</div>';
+    return;
+  }
+  const ph=PHASES[state.phase], ins=INSIGHTS[state.phase], pill=getBBTPill();
+  document.getElementById('bbt-pill-area').innerHTML=`<div class="bbt-pill ${pill.type}"><span class="bp-icon">${pill.icon}</span><span>${pill.text}</span></div>`;
+  const area=document.getElementById('insight-area'); area.innerHTML='';
+  SECTIONS.forEach(sec=>{
+    const el=document.createElement('div'); el.className='isec';
+    el.innerHTML=`<div class="isec-head"><span class="isec-icon">${sec.icon}</span>${sec.title}</div>`;
+    sec.labels.forEach((label,i)=>{
+      const id=`${sec.key}_${i}`, card=document.createElement('div');
+      card.className='icard'; card.style.borderLeftColor=ph.hex;
+      card.innerHTML=`<div class="icard-label">${label}</div><div class="icard-body">${ins[id]||'—'}</div>`;
+      el.appendChild(card);
+    });
+    area.appendChild(el);
+  });
+}
+
+function phaseForDay(cd){ const n=((cd-1)%28)+1; return n<=5?'m':n<=13?'f':n<=17?'o':'l'; }
+
+function predictedPhase(dt){
+  if(state.cycleStartDate){ const d=Math.round((dt-state.cycleStartDate)/86400000); return d<0?null:phaseForDay(d+1); }
+  if(!state.phase) return null;
+  const d=Math.round((dt-TODAY)/86400000), fcd=state.cycleDay+d;
+  return fcd<1?null:phaseForDay(fcd);
+}
+
+function changeMonth(d){ calMonth.setMonth(calMonth.getMonth()+d); buildCalendar(); }
+
+function buildCalendar(){
+  const y=calMonth.getFullYear(), m=calMonth.getMonth();
+  document.getElementById('cal-month').textContent=calMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const grid=document.getElementById('cal-grid'); grid.innerHTML='';
+  ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(l=>{ const h=document.createElement('div'); h.className='cal-hdr-cell'; h.textContent=l; grid.appendChild(h); });
+  const first=new Date(y,m,1).getDay(), dim=new Date(y,m+1,0).getDate(), dipm=new Date(y,m,0).getDate();
+  const cells=[];
+  for(let i=first-1;i>=0;i--) cells.push({d:dipm-i,cm:m-1,other:true});
+  for(let d=1;d<=dim;d++) cells.push({d,cm:m,other:false});
+  while(cells.length%7!==0) cells.push({d:cells.length-dim-first+1,cm:m+1,other:true});
+  cells.forEach(({d,cm,other})=>{
+    const cell=document.createElement('div'); cell.className='cal-cell'+(other?' other-month':'');
+    const dateObj=new Date(y,cm,d); dateObj.setHours(0,0,0,0);
+    if(dateObj.getTime()===TODAY.getTime()) cell.classList.add('is-today');
+    if(state.cycleStartDate&&dateObj.getTime()===state.cycleStartDate.getTime()){ cell.classList.add('cycle-start'); cell.title='Cycle start'; }
+    const numEl=document.createElement('div'); numEl.className='cel-num'; numEl.textContent=d; cell.appendChild(numEl);
+    if(!other){
+      const key=toKey(dateObj), log=logs[key];
+      if(log&&log.phase){
+        cell.style.background=PHASES[log.phase].hex+'35';
+        if(log.cycleDay){ const cd=document.createElement('div'); cd.className='cel-cd'; cd.textContent=`d${log.cycleDay}`; cd.style.color=PHASES[log.phase].hex; cell.appendChild(cd); }
+      } else {
+        const pred=predictedPhase(dateObj);
+        if(pred){
+          cell.style.background=PHASES[pred].bgHex;
+          cell.style.outline=`1px dashed ${PHASES[pred].hex}88`; cell.style.outlineOffset='-2px';
+          let pcd;
+          if(state.cycleStartDate){ const diff=Math.round((dateObj-state.cycleStartDate)/86400000); pcd=((diff)%28)+1; }
+          else { const diff=Math.round((dateObj-TODAY)/86400000); pcd=((state.cycleDay+diff-1)%28)+1; }
+          const cdEl=document.createElement('div'); cdEl.className='cel-cd'; cdEl.textContent=`d${pcd}`; cdEl.style.color=PHASES[pred].hex+'AA'; cell.appendChild(cdEl);
+        }
+      }
+    }
+    grid.appendChild(cell);
+  });
+}
+</script>
+</body>
+</html>
